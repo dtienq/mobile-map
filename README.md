@@ -1,1 +1,1 @@
-# mobile-map
+# Project môn học "Lập trình di động"
