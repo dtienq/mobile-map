@@ -3,6 +3,8 @@ package com.hcmus.map;
 import androidx.fragment.app.FragmentActivity;
 
 import android.os.Bundle;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -14,6 +16,8 @@ import com.google.android.gms.maps.model.MarkerOptions;
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private GoogleMap mMap;
+    private AutoCompleteTextView searchMap;
+    private String[] countries = new String[] { "Viet Nam", "England", "India" };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -23,6 +27,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+        this.initView();
+    }
+
+    private void initView() {
+        searchMap = findViewById(R.id.searchMap);
+
+        ArrayAdapter adapterCountries
+                = new ArrayAdapter(this,android.R.layout.simple_list_item_1,countries);
+
+        searchMap.setAdapter(adapterCountries);
+        searchMap.setThreshold(1);
     }
 
     /**
