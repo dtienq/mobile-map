@@ -7,11 +7,17 @@ import androidx.fragment.app.FragmentActivity;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.location.Address;
+import android.location.Geocoder;
 import android.location.Location;
-import android.location.LocationManager;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.View;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.Button;
+import android.widget.ImageButton;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
@@ -19,17 +25,23 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnSuccessListener;
+
+import java.util.List;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private GoogleMap mMap;
     boolean locationPermissionGranted = false;
     private static final int PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1;
-    Button btnSearchLocation, btnCurrent;
+    Button btnSearchLocation;
+    ImageButton btnCurrent;
     View mapView;
+    AutoCompleteTextView txtSearchStart;
+    LatLng current;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,9 +66,42 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         btnCurrent.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                loadCurrentLocation();
+                moveCameraToCurrent();
             }
         });
+
+        txtSearchStart = mapView.findViewById(R.id.txtSearchStart);
+        txtSearchStart.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+                searchLocation();
+            }
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+//                searchLocation();
+            }
+        });
+    }
+
+    private void searchLocation() {
+        Geocoder geocoder = new Geocoder(this);
+        String location = txtSearchStart.getText().toString();
+
+        try {
+            List<Address> addressList = geocoder.getFromLocationName(location, 10);
+            ArrayAdapter arrayAdapter = new ArrayAdapter(this, android.R.layout.simple_list_item_1, addressList.toArray());
+            txtSearchStart.setAdapter(arrayAdapter);
+            txtSearchStart.setThreshold(1);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
     }
 
     @Override
@@ -97,13 +142,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             // Got last known location. In some rare situations this can be null.
                             if (location != null) {
                                 // Logic to handle location object
-                                LatLng current = new LatLng(location.getLatitude(), location.getLongitude());
-                                mMap.addMarker(new MarkerOptions().position(current));
-                                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(current, 16.0F));
+                                current = new LatLng(location.getLatitude(), location.getLongitude());
+                                MarkerOptions markerOptions = new MarkerOptions();
+                                markerOptions.icon(BitmapDescriptorFactory.fromResource(R.drawable.icon_location));
+                                markerOptions.position(current);
+                                mMap.addMarker(markerOptions);
+                                moveCameraToCurrent();
                             }
                         }
                     });
 
         }
+    }
+
+    private void moveCameraToCurrent() {
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(current, 16.0F));
     }
 }
