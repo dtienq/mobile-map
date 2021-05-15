@@ -33,6 +33,6 @@
         android:id="@+id/btnCurrent"
         android:layout_marginBottom="10dp"
         android:layout_marginRight="10dp"
-        android:background="@color/white"
+        android:background="@null"
         android:src="@drawable/btn_location"/>
 </fragment>
