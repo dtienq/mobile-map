@@ -12,10 +12,12 @@
         android:layout_height="wrap_content"
         android:stretchColumns="0">
         <TableRow android:background="@color/white">
-            <AutoCompleteTextView
+            <fragment
                 android:id="@+id/txtSearchStart"
+                android:name="com.google.android.gms.location.places.ui.PlaceAutocompleteFragment"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content"
+                />
 
             <Button
                 android:id="@+id/btnSearchLocation"

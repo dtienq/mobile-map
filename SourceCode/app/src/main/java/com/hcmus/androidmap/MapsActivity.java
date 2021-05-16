@@ -19,8 +19,13 @@ import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.ImageButton;
 
+import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.places.Place;
+import com.google.android.gms.location.places.Places;
+import com.google.android.gms.location.places.ui.PlaceAutocompleteFragment;
+import com.google.android.gms.location.places.ui.PlaceSelectionListener;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -32,7 +37,7 @@ import com.google.android.gms.tasks.OnSuccessListener;
 
 import java.util.List;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, PlaceSelectionListener {
 
     private GoogleMap mMap;
     boolean locationPermissionGranted = false;
@@ -70,23 +75,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         });
 
-        txtSearchStart = mapView.findViewById(R.id.txtSearchStart);
-        txtSearchStart.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-
-            }
-
-            @Override
-            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-                searchLocation();
-            }
-
-            @Override
-            public void afterTextChanged(Editable editable) {
-//                searchLocation();
-            }
-        });
+        Places.initialize(getApplicationContext(),"@string/google_maps_key");
+        PlaceAutocompleteFragment autocompleteFragment =
+                (PlaceAutocompleteFragment) getFragmentManager().findFragmentById(
+                        R.id.txtSearchStart);
+        autocompleteFragment.setOnPlaceSelectedListener(this);
     }
 
     private void searchLocation() {
@@ -157,5 +150,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void moveCameraToCurrent() {
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(current, 16.0F));
+    }
+
+    @Override
+    public void onPlaceSelected(Place place) {
+
+    }
+
+    @Override
+    public void onError(Status status) {
+
     }
 }
