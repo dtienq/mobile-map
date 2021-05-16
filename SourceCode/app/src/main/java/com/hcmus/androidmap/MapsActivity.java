@@ -1,10 +1,13 @@
 package com.hcmus.androidmap;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Address;
@@ -19,20 +22,27 @@ import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.ImageButton;
 
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.places.Place;
+import com.google.android.gms.location.places.Places;
+import com.google.android.gms.location.places.ui.PlaceAutocompleteFragment;
+import com.google.android.gms.location.places.ui.PlaceSelectionListener;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnSuccessListener;
 
-import java.util.List;
-
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, PlaceSelectionListener, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
 
     private GoogleMap mMap;
     boolean locationPermissionGranted = false;
@@ -40,8 +50,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     Button btnSearchLocation;
     ImageButton btnCurrent;
     View mapView;
-    AutoCompleteTextView txtSearchStart;
+    PlaceAutocompleteFragment placeAutoComplete;
     LatLng current;
+    private GoogleApiClient googleApiClient;
+    private GoogleMap googleMap;
+    private Marker marker;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,38 +83,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         });
 
-        txtSearchStart = mapView.findViewById(R.id.txtSearchStart);
-        txtSearchStart.addTextChangedListener(new TextWatcher() {
+        placeAutoComplete = (PlaceAutocompleteFragment) getFragmentManager().findFragmentById(R.id.place_autocomplete);
+        placeAutoComplete.getView().setBackgroundColor(Color.WHITE);
+        placeAutoComplete.setOnPlaceSelectedListener(new PlaceSelectionListener() {
             @Override
-            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-
+            public void onPlaceSelected(Place place) {
+                // remove old marker when add new marker
+                if (marker != null) marker.remove();
+                LatLng myLatLng = place.getLatLng();
+                marker = googleMap.addMarker(
+                        new MarkerOptions().position(myLatLng).title(String.valueOf(place.getName())));
+                googleMap.animateCamera(CameraUpdateFactory.newLatLng(myLatLng));
             }
 
             @Override
-            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-                searchLocation();
-            }
-
-            @Override
-            public void afterTextChanged(Editable editable) {
-//                searchLocation();
+            public void onError(Status status) {
             }
         });
-    }
-
-    private void searchLocation() {
-        Geocoder geocoder = new Geocoder(this);
-        String location = txtSearchStart.getText().toString();
-
-        try {
-            List<Address> addressList = geocoder.getFromLocationName(location, 10);
-            ArrayAdapter arrayAdapter = new ArrayAdapter(this, android.R.layout.simple_list_item_1, addressList.toArray());
-            txtSearchStart.setAdapter(arrayAdapter);
-            txtSearchStart.setThreshold(1);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-
     }
 
     @Override
@@ -113,6 +111,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         // load current location on map ready
         loadCurrentLocation();
+
+        buildGoogleApiClient();
+        this.googleMap = googleMap;
+        // Add icon my location
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        this.googleMap.setMyLocationEnabled(true);
     }
 
     private void getLocationPermission() {
@@ -157,5 +170,61 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void moveCameraToCurrent() {
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(current, 16.0F));
+    }
+
+    // Callback khi bạn click vào item
+    @Override
+    public void onPlaceSelected(Place place) {
+        // do something
+    }
+
+    @Override
+    public void onError(Status status) {
+
+    }
+
+    @Override
+    public void onConnected(@Nullable Bundle bundle) {
+        // do something
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        Location location = LocationServices.FusedLocationApi.getLastLocation(googleApiClient);
+        LatLng myLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+        CameraPosition cameraPosition = new CameraPosition.Builder().target(
+                myLatLng)                   // Sets the center of the map to Mountain View
+                .zoom(17)                   // Sets the zoom
+                .bearing(0)                // Sets the orientation of the camera to east
+                .tilt(0)                   // Sets the tilt of the camera
+                .build();
+        googleMap.addMarker(new MarkerOptions().position(myLatLng).title("My Place"));
+        googleMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+        // do something when Connection Error
+    }
+
+    @Override
+    public void onConnectionFailed(@NonNull ConnectionResult result) {
+        // do something when Connection Failed
+    }
+
+    private void buildGoogleApiClient() {
+        googleApiClient = new GoogleApiClient.Builder(this).addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .addApi(LocationServices.API)
+                .addApi(Places.GEO_DATA_API)
+                .addApi(Places.PLACE_DETECTION_API)
+                .build();
+        googleApiClient.connect();
     }
 }
