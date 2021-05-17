@@ -11,8 +11,6 @@ import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
 import android.os.Bundle;
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
@@ -23,7 +21,6 @@ import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.places.Place;
-import com.google.android.gms.location.places.Places;
 import com.google.android.gms.location.places.ui.PlaceAutocompleteFragment;
 import com.google.android.gms.location.places.ui.PlaceSelectionListener;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -34,6 +31,8 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.libraries.places.api.Places;
+import com.google.android.libraries.places.api.net.PlacesClient;
 
 import java.util.List;
 
@@ -75,7 +74,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         });
 
-        Places.initialize(getApplicationContext(),"@string/google_maps_key");
         PlaceAutocompleteFragment autocompleteFragment =
                 (PlaceAutocompleteFragment) getFragmentManager().findFragmentById(
                         R.id.txtSearchStart);
