@@ -2,6 +2,7 @@ package com.hcmus.androidmap;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
@@ -9,6 +10,9 @@ import androidx.fragment.app.FragmentActivity;
 import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
+import android.app.Application;
+import android.content.Context;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Address;
@@ -30,6 +34,7 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.libraries.places.api.Places;
 import com.google.android.libraries.places.api.model.Place;
@@ -37,6 +42,7 @@ import com.google.android.libraries.places.widget.Autocomplete;
 import com.google.android.libraries.places.widget.AutocompleteActivity;
 import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
+import com.hcmus.androidmap.models.AddressLocation;
 
 import java.util.Arrays;
 import java.util.List;
@@ -51,6 +57,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     View mapView;
     AutocompleteSupportFragment txtSearchStart;
     LatLng current;
+    Polyline line;
+    MarkerOptions place1, place2;
     private static int AUTOCOMPLETE_REQUEST_CODE = 1;
 
     @Override
@@ -62,7 +70,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-
         // get all view of activity
         mapView = mapFragment.getView();
         getAllView();
@@ -149,7 +156,34 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     });
         }
     }
+    private String GenUrl(LatLng start,LatLng end,int type) {
+        Context context = getApplicationContext();
+        @Nullable ApplicationInfo applicationInfo = null;
+        try {
+            applicationInfo = context.getPackageManager().getApplicationInfo(context.getPackageName(),PackageManager.GET_META_DATA);
 
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+        }
+        String str_start = "origin=" + start.latitude + ","+ start.longitude;
+        String  str_end = "destination=" + end.latitude + "," + end.longitude;
+
+        String travelmode = new String();
+
+        switch (type)
+        {
+            case 1:travelmode="driving";
+            case 2: travelmode =" walking";
+            case 3: travelmode = "bicycling";
+            case 4: travelmode = "transit";
+            default: travelmode= "driving";
+        }
+        String mode = "mode="+ travelmode;
+        String parameters = str_start + "&" + str_end + "&" + mode;
+        String output = "json";
+        String url = "https://maps.googleapis.com/maps/api/directions/" + output + "?" + parameters + "&key=" + applicationInfo.metaData.getString("com.google.android.geo.API_KEY");
+        return url;
+    }
     private void moveCameraToCurrent() {
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(current, 16.0F));
     }

@@ -4,7 +4,13 @@ public class AddressLocation {
     String name;
     Long latitude;
     Long longitude;
-
+    
+    AddressLocation(String name,Long newlat,Long newlong) {
+         this.name = name;
+         this.latitude = newlat;
+         this.longitude= newlong;
+    }
+    
     public String getName() {
         return name;
     }
