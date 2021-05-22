@@ -38,10 +38,7 @@ dependencies {
     testImplementation 'junit:junit:4.+'
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
-    //gmaps
-    implementation 'com.google.android.gms:play-services-maps:16.0.0'
-    implementation 'com.google.android.gms:play-services-location:16.0.0'
 
-    //for API place autocomplete
-    implementation 'com.google.android.gms:play-services-places:16.0.0'
+    //android places
+    implementation "com.google.android.libraries.places:places:1.1.0"
 }
