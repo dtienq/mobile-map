@@ -2,32 +2,33 @@ package com.hcmus.androidmap;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
 
 import android.Manifest;
-import android.app.Activity;
 import android.content.Intent;
-import android.app.Application;
-import android.content.Context;
-import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
-import android.location.Address;
-import android.location.Geocoder;
 import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.Toast;
 
+import com.directions.route.AbstractRouting;
+import com.directions.route.Route;
+import com.directions.route.RouteException;
+import com.directions.route.Routing;
+import com.directions.route.RoutingListener;
+import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
+//import com.google.android.gms.location.places.Place;
+//import com.google.android.gms.location.places.Places;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -41,20 +42,18 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.tasks.OnSuccessListener;
-import com.hcmus.androidmap.fetchURL.FetchURL;
 import com.google.android.libraries.places.api.Places;
 import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.widget.Autocomplete;
 import com.google.android.libraries.places.widget.AutocompleteActivity;
 import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
-import com.hcmus.androidmap.models.AddressLocation;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, ActivityCompat.OnRequestPermissionsResultCallback {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, RoutingListener, ActivityCompat.OnRequestPermissionsResultCallback {
 
     private GoogleMap mMap;
     boolean locationPermissionGranted = false;
@@ -64,20 +63,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     View mapView;
     AutocompleteSupportFragment txtSearchStart;
     LatLng current;
-    Polyline line;
-    MarkerOptions startPoint, endPoint;
+    private List<Polyline> polylines=null;
+    LatLng start, end;
     private static int AUTOCOMPLETE_REQUEST_CODE = 1;
     AutocompleteSupportFragment autocompleteFragment;
     List<LatLng> markers = new ArrayList<>();
     Marker oldMarker = null;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
         //Demo location
-        startPoint = new MarkerOptions().position(new LatLng(37.4219983, -122.086)).title("Start");
-        endPoint = new MarkerOptions().position(new LatLng(37.416868, -122.074517)).title("End");
+
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
@@ -98,7 +95,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 moveCameraToCurrent();
             }
         });
-
+        btnSearchLocation.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                start = current;
+                FindRoutes(start,end);
+            }
+        });
 
         if (!Places.isInitialized()) {
             Places.initialize(getApplicationContext(), getString(R.string.google_maps_key));
@@ -116,7 +119,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     if(oldMarker != null) {
                         oldMarker.remove();
                     }
-
+                    end = selected;
                     oldMarker = mMap.addMarker( new MarkerOptions().position(selected));
                     markers.add(selected);
                     LatLngBounds.Builder builder = new LatLngBounds.Builder();
@@ -147,9 +150,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //get permission from android machine
         boolean isGetCurrentLocation = true;
         getLocationPermission(isGetCurrentLocation);
-        mMap.addMarker(startPoint);
-        mMap.addMarker(endPoint);
-        new FetchURL(MapsActivity.this).execute(GenUrl(startPoint.getPosition(), endPoint.getPosition(), 1), "driving");
     }
 
     private void getLocationPermission(boolean isGetCurrentLocation) {
@@ -191,35 +191,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     });
         }
     }
-    private String GenUrl(LatLng start,LatLng end,int type) {
-        Context context = getApplicationContext();
-        @Nullable ApplicationInfo applicationInfo = null;
-        try {
-            applicationInfo = context.getPackageManager().getApplicationInfo(context.getPackageName(),PackageManager.GET_META_DATA);
 
-        } catch (PackageManager.NameNotFoundException e) {
-            e.printStackTrace();
-        }
-        String str_start = "origin=" + start.latitude + ","+ start.longitude;
-        String  str_end = "destination=" + end.latitude + "," + end.longitude;
-
-        String travelmode;
-
-        switch (type)
-        {
-            case 1:travelmode="driving";
-            case 2: travelmode =" walking";
-            case 3: travelmode = "bicycling";
-            case 4: travelmode = "transit";
-            default: travelmode= "driving";
-        }
-        String mode = "mode="+ travelmode;
-        String parameters = str_start + "&" + str_end + "&" + mode;
-        String output = "json";
-        String url = "https://maps.googleapis.com/maps/api/directions/" + output + "?" + parameters + "&key=" + applicationInfo.metaData.getString("com.google.android.geo.API_KEY");
-        Log.d("success",url);
-        return url;
-    }
     private void moveCameraToCurrent() {
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(current, 16.0F));
     }
@@ -246,9 +218,79 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             // The user canceled the operation.
         }
     }
-    public void onTaskDone(Object... values) {
-        if (line != null)
-            line.remove();
-        line = mMap.addPolyline((PolylineOptions) values[0]);
+    public void FindRoutes(LatLng Start, LatLng End)
+    {
+        if(Start==null || End==null) {
+            Toast.makeText(MapsActivity.this,"Không tìm thấy địa điểm", Toast.LENGTH_LONG).show();
+        }
+        else
+        {
+
+            Routing routing = new Routing.Builder()
+                    .travelMode(AbstractRouting.TravelMode.DRIVING)
+                    .withListener(this)
+                    .alternativeRoutes(true)
+                    .waypoints(Start, End)
+                    .key(getString(R.string.google_maps_key))
+                    .build();
+            routing.execute();
+        }
+    }
+    @Override
+    public void onRoutingFailure(RouteException e) {
+
+    }
+
+    @Override
+    public void onRoutingStart() {
+        Toast.makeText(MapsActivity.this,"Đang tìm...",Toast.LENGTH_LONG).show();
+    }
+
+    @Override
+    public void onRoutingSuccess(ArrayList<Route> routes, int shortestRouteIndex) {
+        CameraUpdate center = CameraUpdateFactory.newLatLng(start);
+        CameraUpdate zoom = CameraUpdateFactory.zoomTo(16);
+        if (polylines != null) {
+            polylines.clear();
+        }
+        PolylineOptions polyOptions = new PolylineOptions();
+        LatLng polylineStartLatLng = null;
+        LatLng polylineEndLatLng = null;
+
+
+        polylines = new ArrayList<>();
+        //add route(s) to the map using polyline
+        for (int i = 0; i < routes.size(); i++) {
+
+            if (i == shortestRouteIndex) {
+                polyOptions.color(ContextCompat.getColor(this,R.color.black));
+                polyOptions.width(7);
+                polyOptions.addAll(routes.get(shortestRouteIndex).getPoints());
+                Polyline polyline = mMap.addPolyline(polyOptions);
+                polylineStartLatLng = polyline.getPoints().get(0);
+                int k = polyline.getPoints().size();
+                polylineEndLatLng = polyline.getPoints().get(k - 1);
+                polylines.add(polyline);
+
+            }
+        }
+        //Điểm bắt đầu
+        MarkerOptions startMarker = new MarkerOptions();
+        startMarker.position(polylineStartLatLng);
+        startMarker.title("Start");
+        mMap.addMarker(startMarker);
+
+        //Điểm kết thúc - Có thể bỏ qua vì điểm này đã được đánh Marker từ trước.
+//        MarkerOptions endMarker = new MarkerOptions();
+//        endMarker.position(polylineEndLatLng);
+//        endMarker.title("End");
+//        mMap.addMarker(endMarker);
+    }
+
+    @Override
+    public void onRoutingCancelled() {
+    }
+    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+
     }
 }
