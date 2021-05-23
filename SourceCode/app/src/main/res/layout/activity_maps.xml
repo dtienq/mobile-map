@@ -16,6 +16,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:name="com.google.android.libraries.places.widget.AutocompleteSupportFragment"
+
                 />
 
             <Button
@@ -23,7 +24,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@drawable/button_search_location_style"
-                android:text="Search"></Button>
+                android:text="Chỉ đường"></Button>
         </TableRow>
     </TableLayout>
 

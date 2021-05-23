@@ -27,12 +27,15 @@ import android.widget.ImageButton;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -44,6 +47,7 @@ import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
 import com.hcmus.androidmap.models.AddressLocation;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -60,6 +64,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     Polyline line;
     MarkerOptions place1, place2;
     private static int AUTOCOMPLETE_REQUEST_CODE = 1;
+    AutocompleteSupportFragment autocompleteFragment;
+    List<LatLng> markers = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -91,21 +97,37 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if (!Places.isInitialized()) {
             Places.initialize(getApplicationContext(), getString(R.string.google_maps_key));
         }
-        AutocompleteSupportFragment autocompleteFragment = (AutocompleteSupportFragment)
+        autocompleteFragment = (AutocompleteSupportFragment)
                 getSupportFragmentManager().findFragmentById(R.id.txtSearchStart);
-        autocompleteFragment.setPlaceFields(Arrays.asList(Place.Field.ID, Place.Field.NAME));
+        autocompleteFragment.setPlaceFields(Arrays.asList(Place.Field.ID, Place.Field.ADDRESS, Place.Field.LAT_LNG));
         autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
             @Override
             public void onPlaceSelected(@NonNull Place place) {
                 // TODO: Get info about the selected place.
+                LatLng selected = place.getLatLng();
 
+                if(selected != null) {
+                    mMap.addMarker( new MarkerOptions().position(selected));
+
+                    markers.add(current);
+                    markers.add(selected);
+                    LatLngBounds.Builder builder = new LatLngBounds.Builder();
+                    for (LatLng marker : markers) {
+                        builder.include(marker);
+                    }
+                    LatLngBounds bounds = builder.build();
+
+                    int padding = 100; // offset from edges of the map in pixels
+                    CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngBounds(bounds, padding);
+                    mMap.animateCamera(cameraUpdate);
+                }
             }
 
 
             @Override
             public void onError(@NonNull Status status) {
                 // TODO: Handle the error.
-
+                System.out.println(status);
             }
         });
     }
@@ -196,15 +218,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
         if (resultCode == RESULT_OK) {
             Place place = Autocomplete.getPlaceFromIntent(data);
+            autocompleteFragment.setText(place.getAddress());
         } else if (resultCode == AutocompleteActivity.RESULT_ERROR) {
             // TODO: Handle the error.
             Status status = Autocomplete.getStatusFromIntent(data);
         } else if (resultCode == RESULT_CANCELED) {
             // The user canceled the operation.
         }
-
-        super.onActivityResult(requestCode, resultCode, data);
     }
 }
