@@ -19,6 +19,7 @@ import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -38,7 +39,9 @@ import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.hcmus.androidmap.fetchURL.FetchURL;
 import com.google.android.libraries.places.api.Places;
 import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.widget.Autocomplete;
@@ -62,7 +65,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     AutocompleteSupportFragment txtSearchStart;
     LatLng current;
     Polyline line;
-    MarkerOptions place1, place2;
+    MarkerOptions startPoint, endPoint;
     private static int AUTOCOMPLETE_REQUEST_CODE = 1;
     AutocompleteSupportFragment autocompleteFragment;
     List<LatLng> markers = new ArrayList<>();
@@ -72,7 +75,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
-
+        //Demo location
+        startPoint = new MarkerOptions().position(new LatLng(37.4219983, -122.086)).title("Start");
+        endPoint = new MarkerOptions().position(new LatLng(37.416868, -122.074517)).title("End");
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
@@ -142,6 +147,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //get permission from android machine
         boolean isGetCurrentLocation = true;
         getLocationPermission(isGetCurrentLocation);
+        mMap.addMarker(startPoint);
+        mMap.addMarker(endPoint);
+        new FetchURL(MapsActivity.this).execute(GenUrl(startPoint.getPosition(), endPoint.getPosition(), 1), "driving");
     }
 
     private void getLocationPermission(boolean isGetCurrentLocation) {
@@ -177,6 +185,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                 mMap.addMarker(markerOptions);
                                 markers.add(current);
                                 moveCameraToCurrent();
+                                Log.d("success",location.getLatitude() +", " +location.getLongitude());
                             }
                         }
                     });
@@ -194,7 +203,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         String str_start = "origin=" + start.latitude + ","+ start.longitude;
         String  str_end = "destination=" + end.latitude + "," + end.longitude;
 
-        String travelmode = new String();
+        String travelmode;
 
         switch (type)
         {
@@ -208,6 +217,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         String parameters = str_start + "&" + str_end + "&" + mode;
         String output = "json";
         String url = "https://maps.googleapis.com/maps/api/directions/" + output + "?" + parameters + "&key=" + applicationInfo.metaData.getString("com.google.android.geo.API_KEY");
+        Log.d("success",url);
         return url;
     }
     private void moveCameraToCurrent() {
@@ -235,5 +245,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         } else if (resultCode == RESULT_CANCELED) {
             // The user canceled the operation.
         }
+    }
+    public void onTaskDone(Object... values) {
+        if (line != null)
+            line.remove();
+        line = mMap.addPolyline((PolylineOptions) values[0]);
     }
 }
