@@ -66,6 +66,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private static int AUTOCOMPLETE_REQUEST_CODE = 1;
     AutocompleteSupportFragment autocompleteFragment;
     List<LatLng> markers = new ArrayList<>();
+    Marker oldMarker = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -107,9 +108,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 LatLng selected = place.getLatLng();
 
                 if(selected != null) {
-                    mMap.addMarker( new MarkerOptions().position(selected));
+                    if(oldMarker != null) {
+                        oldMarker.remove();
+                    }
 
-                    markers.add(current);
+                    oldMarker = mMap.addMarker( new MarkerOptions().position(selected));
                     markers.add(selected);
                     LatLngBounds.Builder builder = new LatLngBounds.Builder();
                     for (LatLng marker : markers) {
@@ -117,7 +120,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     }
                     LatLngBounds bounds = builder.build();
 
-                    int padding = 100; // offset from edges of the map in pixels
+                    int padding = 200; // offset from edges of the map in pixels
                     CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngBounds(bounds, padding);
                     mMap.animateCamera(cameraUpdate);
                 }
@@ -172,6 +175,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                 markerOptions.icon(BitmapDescriptorFactory.fromResource(R.drawable.icon_location));
                                 markerOptions.position(current);
                                 mMap.addMarker(markerOptions);
+                                markers.add(current);
                                 moveCameraToCurrent();
                             }
                         }
@@ -219,6 +223,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        markers = new ArrayList<>();
+        markers.add(current);
 
         if (resultCode == RESULT_OK) {
             Place place = Autocomplete.getPlaceFromIntent(data);
